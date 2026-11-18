@@ -68,4 +68,4 @@ Quy tắc: tiền và phê duyệt luôn chấm bằng code. Judge chỉ dùng c
 | Vai trò | Tên | Ngày |
 |---|---|---|
 | Product | | |
-| Eval owner (giữ gate) | | 2026-11-18 |
+| Eval owner (giữ gate) | Trần Thị Hà Anh | 2026-11-18 |
