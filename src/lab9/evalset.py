@@ -40,7 +40,7 @@ FAILURE_MODES: dict[str, list[str]] = {
     "C-006": ["FM-01", "FM-06"],
     "C-007": ["FM-01", "FM-02", "FM-04"],
     "C-008": ["FM-01", "FM-04", "FM-05", "FM-08"],
-    "C-009": ["FM-01", "FM-03"],
+    "C-009": ["FM-01"],
     "C-010": ["FM-01", "FM-04", "FM-07"],
     "C-011": ["FM-01", "FM-04", "FM-07"],
     "C-012": ["FM-01", "FM-04", "FM-07"],
@@ -74,8 +74,8 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         })
         labels[claim["claim_id"]] = claim["expected"]
     ITEMS.parent.mkdir(parents=True, exist_ok=True)
-    ITEMS.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8")
-    LABELS.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8")
+    ITEMS.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8", newline="\n")
+    LABELS.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     return len(items), len(labels)
 
 
@@ -116,8 +116,8 @@ def build_v2(items_v1: Path = ITEMS, labels_v1: Path = LABELS, pack: Path = PACK
             "slices": slices_for(claim["expected"], True),
         })
         labels[claim["claim_id"]] = claim["expected"]
-    ITEMS_V2.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8")
-    LABELS_V2.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8")
+    ITEMS_V2.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8", newline="\n")
+    LABELS_V2.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     return len(items), len(labels)
 
 
