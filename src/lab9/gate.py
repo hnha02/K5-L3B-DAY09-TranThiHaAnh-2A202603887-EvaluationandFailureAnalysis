@@ -39,12 +39,12 @@ def integrity_check(pr: dict, base: dict, spec: dict, base_spec: dict | None = N
     man, bman = pr.get("manifest") or {}, base.get("manifest") or {}
     rows, brows = pr.get("rows") or [], base.get("rows") or []
 
-    # 1. metric values must be finite numbers (NaN < min is False, so NaN would sail through)
+    # NaN / inf
     for k, v in (pr.get("metrics") or {}).items():
         if isinstance(v, float) and not math.isfinite(v):
             problems.append(f"metric {k} is {v} (not a finite number)")
 
-    # 2. row count = items x seeds, and the manifest still describes the baseline's run
+    # row count and manifest
     seeds = man.get("seeds") or []
     if len(rows) != (man.get("items") or 0) * len(seeds):
         problems.append(f"{len(rows)} rows != {man.get('items')} items x {len(seeds)} seeds")
@@ -52,7 +52,7 @@ def integrity_check(pr: dict, base: dict, spec: dict, base_spec: dict | None = N
         problems.append(f"manifest items/seeds {man.get('items')}/{seeds} differ from the baseline's "
                         f"{bman.get('items')}/{bman.get('seeds')}")
 
-    # 3. the exact (item, seed) set, no duplicates (a passing row copied over a failing one keeps the count)
+    # same (item, seed) set as baseline, no duplicates
     keys = [(r.get("item_id"), r.get("seed")) for r in rows]
     dups = sorted({k for k in keys if keys.count(k) > 1}, key=str)
     if dups:
@@ -62,7 +62,7 @@ def integrity_check(pr: dict, base: dict, spec: dict, base_spec: dict | None = N
         missing, extra = sorted(bkeys - set(keys), key=str), sorted(set(keys) - bkeys, key=str)
         problems.append(f"(item, seed) set differs from baseline: missing {missing[:5]}, extra {extra[:5]}")
 
-    # 4. no crashed graders: evaluator failures, or a graded metric missing / None on a row
+    # crashed graders
     if pr.get("evaluator_failures"):
         problems.append(f"{len(pr['evaluator_failures'])} evaluator failure(s), first: {pr['evaluator_failures'][0]}")
     graded = [m["id"] for m in spec.get("metrics", []) if m["id"] in GRADERS]
@@ -70,13 +70,13 @@ def integrity_check(pr: dict, base: dict, spec: dict, base_spec: dict | None = N
     if holes:
         problems.append(f"{len(holes)} graded value(s) missing/None, first: {holes[0]}")
 
-    # 4b. headline metrics must be what the rows say (a hand-edited or stale metrics block)
+    # metrics must match the rows
     if rows and not holes:
         ids = [m for m in graded if all(m in r for r in rows)]
         rows_c = [{**r, "cost": r.get("cost", 0.0)} for r in rows]
         try:
             again = aggregate(rows_c, ids, k_values=spec.get("pass_k", []))
-        except Exception as e:  # noqa: BLE001 -- an unreadable report is untrustworthy, not a crash
+        except Exception as e:
             problems.append(f"cannot recompute metrics from rows: {e!r}")
             again = {}
         for k, v in again.items():
@@ -87,12 +87,11 @@ def integrity_check(pr: dict, base: dict, spec: dict, base_spec: dict | None = N
                     and math.isfinite(got) and abs(v - got) > 1e-3:
                 problems.append(f"metric {k}={got} does not match its rows ({v})")
 
-    # 5. ratchet: thresholds only get stricter (applied whenever base_spec is given -- the gate already
-    #    requires the same eval-set sha, so renaming eval_set_version cannot dodge it)
+    # ratchet (also applies if eval_set_version is renamed, the sha is the same anyway)
     if base_spec is not None:
         problems += _ratchet(base_spec, spec)
 
-    # 6. slice tags: identical to the baseline's per item, and consistent across an item's seeds
+    # slice tags
     def tags(rs: list[dict]) -> tuple[dict, set]:
         out: dict = {}
         mixed: set = set()
@@ -161,7 +160,7 @@ def slice_check(pr: dict, base: dict, spec: dict) -> tuple[list[str], list[str]]
         a, b = per_item(pr, metric, slice_name=name), per_item(base, metric, slice_name=name)
         verdict, note, val = "ok", "", None
         if not a:
-            verdict, note = "fail", "empty slice"            # an empty slice proves nothing
+            verdict, note = "fail", "empty slice"
         else:
             val = round(sum(a.values()) / len(a), 4)
             if "min" in s and val < s["min"]:

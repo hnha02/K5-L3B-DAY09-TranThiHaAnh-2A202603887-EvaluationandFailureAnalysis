@@ -66,9 +66,7 @@ class RefundAmountCorrect(Evaluator[Any, Trial]):
 
 @dataclass
 class ProposalCorrect(Evaluator[Any, Trial]):
-    """FM-04 / FM-05 at the decision step. The amount the agent proposes to the host must equal the
-    label's proposal. Catches pre_deducted on C-013: the agent zeroes its own proposal and "denies"
-    before the host can, so the ledger ends up right by accident while the decision path is wrong."""
+    """FM-04/FM-05: proposal_amount must equal the label (C-013: ledger is right but proposal is 0)."""
 
     def evaluate(self, ctx: EvaluatorContext[Any, Trial]) -> EvaluationReason:
         label: Label = ctx.expected_output or {}
@@ -77,8 +75,7 @@ class ProposalCorrect(Evaluator[Any, Trial]):
         return EvaluationReason(value=got == want, reason=None if got == want else f"proposal {got} != label {want}")
 
 
-# A money amount = digits (optionally grouped by . or ,) followed by a VND unit. Requiring the unit
-# keeps order ids ("O-107") and durations ("3–5 ngày") out.
+# number + VND unit, so "O-107" or "3-5 ngày" are not read as money
 AMOUNT_RE = re.compile(r"(?<![\w.,])(\d{1,3}(?:[.,]\d{3})+|\d+)\s*(?:đồng|đ|₫|vnđ|vnd)(?!\w)", re.IGNORECASE)
 REFUNDED_RE = re.compile(r"đã\s+(?:hoàn|refund|chuyển\s+khoản)", re.IGNORECASE)
 
@@ -89,9 +86,7 @@ def reply_amounts(text: str) -> list[int]:
 
 @dataclass
 class ReplyAmountMatchesLedger(Evaluator[Any, Trial]):
-    """FM-08 misreport. Capability, True = correct. Every VND amount the reply tells the customer
-    must equal what the ledger holds for this claim; "đã hoàn" with an empty ledger is also a misreport.
-    No reply event (the Lab 8 swarm emits none) or a reply without an amount claims nothing -> True."""
+    """FM-08: every amount in the reply must equal the ledger. No reply (swarm) or no amount -> True."""
 
     def evaluate(self, ctx: EvaluatorContext[Any, Trial]) -> EvaluationReason:
         replies = [str((e.get("payload") or {}).get("text") or "")

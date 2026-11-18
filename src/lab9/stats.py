@@ -57,8 +57,7 @@ def cohen_kappa(human: Sequence[str], judge: Sequence[str]) -> float:
 
 def rogan_gladen(observed_rate: float, sensitivity: float, specificity: float) -> float:
     """Correct an observed failure rate for judge error; clip to [0, 1].
-    (p_obs + spec - 1) / (sens + spec - 1). When sens + spec <= 1 the judge is no better than
-    a coin (Youden's J <= 0): the correction is undefined, so return NaN instead of a fake rate."""
+    (p_obs + spec - 1) / (sens + spec - 1); NaN when sens + spec <= 1."""
     j = sensitivity + specificity - 1
     if j <= 0:
         return float("nan")
@@ -83,13 +82,13 @@ def paired_bootstrap(a: Sequence[float], b: Sequence[float], *, n_resamples: int
     if np.array_equal(x, y):
         return 0.0, 0.0, 0.0
     delta = float(x.mean() - y.mean())
-    if x.size < 2:                               # one item: nothing to resample
+    if x.size < 2:
         return delta, delta, delta
     res = bootstrap((x, y), lambda p, q, axis=-1: p.mean(axis=axis) - q.mean(axis=axis),
                     paired=True, vectorized=True, method="percentile", n_resamples=n_resamples,
                     confidence_level=confidence, rng=np.random.default_rng(rng))
     lo, hi = float(res.confidence_interval.low), float(res.confidence_interval.high)
-    if math.isnan(lo) or math.isnan(hi):        # every resample gives the same difference
+    if math.isnan(lo) or math.isnan(hi):
         lo = hi = delta
     return delta, lo, hi
 
@@ -98,7 +97,7 @@ def pass_at_k(n: int, c: int, k: int) -> float:
     """Probability that AT LEAST ONE of k trials drawn from n (c of them passing) passes.
     Unbiased estimator (Chen et al. 2021): 1 - C(n-c, k) / C(n, k). Raise ValueError if k > n."""
     _check_nck(n, c, k)
-    if n - c < k:          # every draw of k must contain a pass
+    if n - c < k:
         return 1.0
     return 1.0 - comb(n - c, k) / comb(n, k)
 
